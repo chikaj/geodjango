@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+{% block title_html %}
+    Mapping attempt by Nate
+{% endblock %}
+{% block extrahead %}
+    {% comment %}<script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script src="http://d3js.org/topojson.v1.min.js"></script>{% endcomment %}
+{% endblock %}
+{% block body_content %}
+
+    <div id="map" class="map"></div>
+	{% comment %} <script src="{% static "js/mapping.js" %}"></script> {% endcomment %}
+
+	<script type="text/javascript">
+
+		function init () {
+
+			var stamen_layer = new ol.layer.Tile({
+		        source: new ol.source.Stamen({
+		            layer: 'watercolor'
+		        })
+		    });
+
+		    //var center_point = ol.proj.transform([-97.95, 29.89], 'EPSG:4326', 'EPSG:3857'); // centered on San Marcos, Texas
+		    var center_point = ol.proj.transform([0, 0], 'EPSG:4326', 'EPSG:3857'); // centered at 0 long, 0 lat
+
+		    var view = new ol.View({
+		        center: center_point,
+		        zoom: 2
+		    });
+
+		    var map = new ol.Map({
+		        target: 'map',
+		    });
+
+		/*
+		    var worldVector = new ol.layer.Vector({
+		        source: new ol.source.Vector({
+		            url: '{% static "geo/world2_nc.json" %}',
+		            projection: 'EPSG:4326',
+		            format: new ol.format.GeoJSON()
+		        })
+		    });
+		*/
+
+		    var gjformat = new ol.format.GeoJSON();
+		    var feat = gjformat.readFeatures({{ states | safe }}, {
+		        dataProjection: 'EPSG:4326',
+		        featureProjection: 'EPSG:3857'
+		        }
+		    );
+		    var sourceVector = new ol.source.Vector({
+		        features: feat
+		    });
+
+		    var statesVector = new ol.layer.Vector({
+		        source: sourceVector,
+		        projection: 'EPSG:4326'
+		    });
+
+		    var riverVector = new ol.layer.Vector({
+		        source: new ol.source.Vector({
+		            features: (new ol.format.GeoJSON()).readFeatures({{ rivers | safe }},{
+		                dataProjection: 'EPSG:4326',
+		                featureProjection: 'EPSG:3857'
+		            })
+		        })
+		    });
+
+		    var citiesVector = new ol.layer.Vector({
+		        source: new ol.source.Vector({
+		            features: (new ol.format.GeoJSON()).readFeatures({{ cities | safe }},{
+		                dataProjection: 'EPSG:4326',
+		                featureProjection: 'EPSG:3857'
+		            })
+		        })
+		    });
+
+		    var geoLocation = new ol.Geolocation({
+		        projection: view.getProjection(), // projection EPSG:3857 (web mercator)...projection coordinate will be in
+		        tracking: true
+		    });
+
+		    //var positionFeature = new ol.Feature(new ol.geom.Point([0, 0]));
+		    //positionFeature.getGeometry().transform('EPSG:4326', 'EPSG:3857')
+		    var positionFeature = new ol.Feature();
+		    positionFeature.setStyle(new ol.style.Style({
+		        image: new ol.style.Circle({
+		            radius: 6,
+		            fill: new ol.style.Fill({
+		                //color: '#3399CC'
+		                color: '#F9E436'
+		            }),
+		            stroke: new ol.style.Stroke({
+		                color: '#FFC000',
+		                width: 2
+		            })
+		        })
+		    }));
+
+		    var positionVector = new ol.layer.Vector({
+		        source: new ol.source.Vector({
+		            features: [positionFeature]
+		        })
+		    });
+
+		    var trackPositions = new ol.geom.LineString([], 'XY');
+		    var trackFeature = new ol.Feature(trackPositions);
+		    var trackVector = new ol.layer.Vector({
+		        source: new ol.source.Vector({
+		            features: [trackFeature]
+		        })
+		    });
+
+		    geoLocation.on('change:position', function() {
+		        var coordinates = geoLocation.getPosition();
+		        //window.alert("Position changed to: " + coordinates);
+		        positionFeature.setGeometry(coordinates ? new ol.geom.Point(coordinates): null);
+		        trackPositions.appendCoordinate(coordinates);
+
+
+		        // Add code to pass location to PostGIS DB
+		        // which will then fire an event trigger
+		        // and inform all users of the app of the 
+		        // change in location. 
+		        // (Will need to use Python Twisted?)
+		        
+		    });
+
+		    map.addLayer(stamen_layer);
+		    //map.addLayer(worldVector);
+		    map.addLayer(statesVector);
+		    map.addLayer(riverVector);
+		    //map.addLayer(citiesVector);
+		    map.addLayer(positionVector);
+		    map.addLayer(trackVector);
+		    map.setView(view);
+		}
+
+		$(document).ready(function() {
+			init();
+		});
+
+	</script>
+    
+{% endblock %}

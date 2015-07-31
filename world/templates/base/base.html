@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+    <head lang="en">
+        <meta charset="UTF-8">
+        <title>{% block title_html %} {%endblock%}</title>
+        {% load staticfiles %}
+            <link href="{% static "css/ol.css" %}" rel="stylesheet" type="text/css"/>
+            <link href="{% static "css/mapStyles.css" %}" rel="stylesheet" type="text/css"/>
+            <script src="{% static "js/lib/ol-debug.js" %}"></script>
+            <script src="{% static "js/lib/jquery-debug.js" %}"></script>
+        {% block extrahead %}
+        {% endblock %}
+    </head>
+    <body>
+        {% block body_content %} {% endblock %}           
+    </body>
+</html>
