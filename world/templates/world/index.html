@@ -47,8 +47,10 @@
 		    });
 		*/
 
+        var states = {{ states | safe }};
+        if (!states.features) states.features = [];
 		    var gjformat = new ol.format.GeoJSON();
-		    var feat = gjformat.readFeatures({{ states | safe }}, {
+		    var feat = gjformat.readFeatures(states, {
 		        dataProjection: 'EPSG:4326',
 		        featureProjection: 'EPSG:3857'
 		        }
@@ -62,18 +64,22 @@
 		        projection: 'EPSG:4326'
 		    });
 
+        var rivers = {{ rivers | safe }};
+        if (!rivers.features) rivers.features = [];
 		    var riverVector = new ol.layer.Vector({
 		        source: new ol.source.Vector({
-		            features: (new ol.format.GeoJSON()).readFeatures({{ rivers | safe }},{
+		            features: (new ol.format.GeoJSON()).readFeatures(rivers,{
 		                dataProjection: 'EPSG:4326',
 		                featureProjection: 'EPSG:3857'
 		            })
 		        })
 		    });
 
+        var cities = {{ cities | safe }};
+        if (!cities.features) cities.features = [];
 		    var citiesVector = new ol.layer.Vector({
 		        source: new ol.source.Vector({
-		            features: (new ol.format.GeoJSON()).readFeatures({{ cities | safe }},{
+		            features: (new ol.format.GeoJSON()).readFeatures(cities,{
 		                dataProjection: 'EPSG:4326',
 		                featureProjection: 'EPSG:3857'
 		            })
@@ -125,10 +131,24 @@
 
 		        // Add code to pass location to PostGIS DB
 		        // which will then fire an event trigger
-		        // and inform all users of the app of the 
-		        // change in location. 
+		        // and inform all users of the app of the
+		        // change in location.
 		        // (Will need to use Python Twisted?)
-		        
+            $.ajax({
+              type: "POST",
+              url: "{% url 'world:updateGeoLocation' %}",
+              data: JSON.stringify({ "geoLocation": coordinates }),
+              dataType: "json",
+              contentType: "application/json",
+              success: function(){
+                console.log("test point added");
+                console.log(arguments);
+              },
+              error: function(err){
+                console.log(err);
+              }
+            });
+
 		    });
 
 		    map.addLayer(stamen_layer);
@@ -142,9 +162,20 @@
 		}
 
 		$(document).ready(function() {
+      function csrfSafeMethod(method) {
+          // these HTTP methods do not require CSRF protection
+          return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+      }
+      $.ajaxSetup({
+          beforeSend: function(xhr, settings) {
+              if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                  xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+              }
+          }
+      });
 			init();
 		});
 
 	</script>
-    
+
 {% endblock %}

@@ -1,7 +1,9 @@
 from django.shortcuts import render
-from django.http import HttpResponse
-from .models import WorldBorder, StatesBorder
+from django.http import HttpResponse, JsonResponse
+from .models import WorldBorder, StatesBorder, TestPoints
 from .customsql import getGeoJSON, getGJ
+import json
+from django.contrib.gis.geos import Point
 # import json
 
 
@@ -21,11 +23,14 @@ def states(request):
     return render(request, 'world/index.html', {'borders': qs})
 
 
-# def updateGeoLocation(request):
-#     if request.method == 'POST':
-#         if 'geoLocation' in request.POST:
-#             geoLocation = request.POST['geoLocation']
-#             # update table with this new geoLocation
-#             return HttpResponse('Successfully updated geoLocation!')
+def updateGeoLocation(request):
+    if request.method == 'POST':
+        body = json.loads(request.body)
+        if 'geoLocation' in body:
+            geoLocation = body['geoLocation']
+            # update table with this new geoLocation
+            point = TestPoints(name="test", popularity=0, geom=Point(geoLocation[0], geoLocation[1]))
+            point.save()
+            return JsonResponse({'id': point.id})
 
-#     return HttpResponse('Oops. Something went wrong updateing geoLocation')
+    return HttpResponse('Oops. Something went wrong updating geoLocation', status=500)
